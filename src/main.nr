@@ -44,12 +44,16 @@ fn rec_iter(
                 }
             }
         } else {
-
+            assert(encodIndex < maxLen);
             let prefix = encodArray[encodIndex];
 
             // ---------------- SINGLE BYTE ----------------
-            if prefix > 0 {
+            if prefix >= 0 {
                 if prefix <= 127 {
+                    assert(charIndex < charN);
+                    assert(depthIndex < lenN);
+                    assert(depthIndex < depN);
+
                     charArray[charIndex] = prefix;
                     lenArray[depthIndex] = 1;
                     depArray[depthIndex] = depth;
@@ -64,13 +68,21 @@ fn rec_iter(
 
                     let strLen = prefix - 128;
 
+                    assert(encodIndex + 1 + strLen <= maxLen);
+                    assert(charIndex + strLen <= charN);
+                    assert(depthIndex < lenN);
+                    assert(depthIndex < depN);
+
                     lenArray[depthIndex] = strLen;
                     depArray[depthIndex] = depth;
 
                     for i in 0..charN {
                         if i < strLen {
-                            charArray[charIndex + i] =
-                                encodArray[encodIndex + 1 + i];
+                            let b = encodArray[encodIndex + 1 + i];
+                            // ---- STRICT CHECK: no list inside string ----
+                            assert(b <= 127);
+                            assert(b>0);
+                            charArray[charIndex + i] = b;
                         }
                     }
 
@@ -93,13 +105,25 @@ fn rec_iter(
                         }
                     }
 
+                    assert(len_of_len <= maxLenOfLen);
+                    assert(encodIndex + 1 + len_of_len <= maxLen);
+                    assert(encodIndex + 1 + len_of_len + actLen <= maxLen);
+                    assert(charIndex + actLen <= charN);
+                    assert(depthIndex < lenN);
+                    assert(depthIndex < depN);
+
+
                     lenArray[depthIndex] = actLen;
                     depArray[depthIndex] = depth;
 
                     for i in 0..charN {
                         if i < actLen {
-                            charArray[charIndex + i] =
-                            encodArray[encodIndex + 1 + len_of_len + i];
+                            let b = encodArray[encodIndex + 1 + len_of_len + i];
+
+                            // ---- STRICT CHECK ----
+                            assert(b <= 127);
+
+                            charArray[charIndex + i] = b;
                         }
                     }
 
@@ -111,6 +135,10 @@ fn rec_iter(
                 // ---------------- SHORT LIST ----------------
                 else if prefix <= 247 {
                     let list_len = prefix - 192;
+
+                    assert(stackPtr < maxRecDepth);
+                    assert(encodIndex + 1 + list_len <= maxLen);
+
                     // -------- EMPTY LIST --------
                     if list_len == 0 {
                         lenArray[depthIndex] = 0;
@@ -136,11 +164,16 @@ fn rec_iter(
 
                     for i in 0..maxLenOfLen {
                         if i < len_of_len {
-                            actLen =
-                            actLen * 256 +
-                            encodArray[encodIndex + 1 + i];
+                            actLen = actLen * 256 + encodArray[encodIndex + 1 + i];
                         }
                     }
+
+                    assert(actLen <= charN);
+                    assert(len_of_len <= maxLenOfLen);
+                    assert(encodIndex + 1 + len_of_len <= maxLen);
+                    assert(encodIndex + 1 + len_of_len + actLen <= maxLen);
+                    assert(stackPtr < maxRecDepth);
+
                     // -------- EMPTY LIST --------
                     if actLen == 0 {
                         lenArray[depthIndex] = 0;
@@ -177,7 +210,9 @@ fn rec_iter(
             }
         }
     }
-    
+
+    assert(encodIndex == maxLen);
+    assert(stackPtr == 0);
 
     (charArray,lenArray,depArray,charIndex,depthIndex)
 }
