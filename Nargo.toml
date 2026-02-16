@@ -1,0 +1,6 @@
+[package]
+name = "rlp2"
+type = "bin"
+authors = [""]
+
+[dependencies]
